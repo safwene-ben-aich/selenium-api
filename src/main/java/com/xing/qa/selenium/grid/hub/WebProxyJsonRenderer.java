@@ -1,7 +1,13 @@
-package com.xing.qa.selenium.grid.hub;
+	package com.xing.qa.selenium.grid.hub;
 
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
+import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -9,19 +15,9 @@ import org.openqa.grid.common.SeleniumProtocol;
 import org.openqa.grid.internal.RemoteProxy;
 import org.openqa.grid.internal.TestSession;
 import org.openqa.grid.internal.TestSlot;
+import org.openqa.selenium.remote.BrowserType;
 import org.openqa.selenium.remote.CapabilityType;
 import org.openqa.selenium.remote.DesiredCapabilities;
-import org.openqa.selenium.remote.BrowserType;
-
-
-import java.io.InputStream;
-
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 
 
 /**
@@ -40,26 +36,21 @@ public class WebProxyJsonRenderer implements JSONRenderer {
     @Override
     public JSONObject render() throws JSONException {
         JSONObject json = new JSONObject();
-        JsonObject status = proxy.getStatus();
+        JSONObject status = new JSONObject(proxy.getProxyStatus());
+        JSONObject value = status.getJSONObject("value");
         json.put("class", proxy.getClass().getSimpleName());
 
         try {
-            json.put("version",
-                    status.getAsJsonObject("value").getAsJsonObject("build").getAsJsonPrimitive("version").getAsString());
+            JSONObject build = value.getJSONObject("build");
+            json.put("version", build.getString("version"));
         } catch (JSONException e) {
             json.put("version", "unknown");
             json.put("error", e.getMessage());
             json.put("trace", e.getStackTrace());
             e.printStackTrace();
         }
-
-        Set<Map.Entry<String, JsonElement>> os = status.getAsJsonObject("value").getAsJsonObject("os").entrySet();
-        Map<String, String> osProperties = new HashMap<>();
-        for(Map.Entry<String, JsonElement> entry : os) {
-            osProperties.put(entry.getKey(), entry.getValue().getAsString());
-        }
-        json.put("os", osProperties);
-        json.put("java", status.getAsJsonObject("value").getAsJsonObject("java").getAsJsonPrimitive("version").getAsString());
+        json.put("os", value.get("os"));
+        json.put("java", value.get("java"));
         json.put("configuration", proxy.getConfig());
 
         SlotsLines rcLines = new SlotsLines();

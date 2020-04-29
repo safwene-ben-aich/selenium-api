@@ -1,23 +1,28 @@
 package com.xing.qa.selenium.grid.hub;
 
-import org.json.JSONException;
-import org.json.JSONObject;
-import org.openqa.grid.internal.GridRegistry;
-import org.openqa.grid.internal.RemoteProxy;
-import org.openqa.grid.web.Hub;
-import org.openqa.grid.web.servlet.RegistryBasedServlet;
-import org.openqa.selenium.Capabilities;
-import org.openqa.selenium.internal.BuildInfo;
+import java.io.IOException;
+import java.io.Writer;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.Writer;
-import java.util.*;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+
+import org.json.JSONException;
+import org.json.JSONObject;
+import org.openqa.grid.internal.GridRegistry;
+import org.openqa.grid.internal.RemoteProxy;
+import org.openqa.grid.internal.TestSession;
+import org.openqa.grid.web.Hub;
+import org.openqa.grid.web.servlet.RegistryBasedServlet;
+import org.openqa.selenium.BuildInfo;
+import org.openqa.selenium.Capabilities;
+import org.openqa.selenium.remote.server.ActiveSessions;
 
 /**
  * Console information nad more as JSON
@@ -83,20 +88,21 @@ public class Console extends RegistryBasedServlet {
 
     protected JSONObject pendingRequests() throws JSONException {
         JSONObject pending = new JSONObject();
-        int p = getRegistry().getNewSessionRequestCount();
-        List<Map<String,?>> desired;
 
-        if (p > 0) {
-            desired = new ArrayList<Map<String, ?>>();
-            for (Capabilities c: getRegistry().getDesiredCapabilities()) {
-                desired.add(c.asMap());
-            }
-        } else {
-            desired = Collections.emptyList();
+        int activeSessions = getRegistry().getActiveSessions().size();
+
+        ArrayList<Map<String, Object>>  requestedCapabilities = new ArrayList<>();
+
+        for (TestSession testSession : getRegistry().getActiveSessions()) {
+            try {
+                requestedCapabilities.add(testSession.getRequestedCapabilities());
+            } catch (Exception e) {}
         }
 
-        pending.put("pending", p);
-        pending.put("requested_capabilities", desired);
+        pending.put("active", activeSessions);
+        pending.put("requested_capabilities", requestedCapabilities);
+
+
 
         return pending;
     }
@@ -116,8 +122,11 @@ public class Console extends RegistryBasedServlet {
                 } catch (Exception e) {}
             }
 
+
+
             status.put("version", coreVersion);
-            status.put("configuration", getRegistry().getHub().getConfiguration().toJson().getAsJsonObject().entrySet());
+            JSONObject configuration = new JSONObject(getRegistry().getHub().getConfiguration().toJson());
+            status.put("configuration", configuration);
             status.put("host", h.getConfiguration().host);
             status.put("port", h.getConfiguration().port);
             status.put("registration_url", h.getRegistrationURL());
