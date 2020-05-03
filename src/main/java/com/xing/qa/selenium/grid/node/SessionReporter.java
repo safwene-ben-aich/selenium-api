@@ -7,12 +7,12 @@ import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 
+import com.xing.qa.selenium.grid.BaseSeleniumReporter;
 import org.influxdb.InfluxDB;
 import org.influxdb.dto.Point;
 import org.influxdb.dto.Point.Builder;
 import org.openqa.grid.internal.ExternalSessionKey;
 import org.openqa.grid.internal.TestSession;
-import org.yaml.snakeyaml.emitter.ScalarAnalysis;
 
 /**
  * Session Reporter

@@ -1,4 +1,4 @@
-package com.xing.qa.selenium.grid.node;
+package com.xing.qa.selenium.grid;
 
 
 import java.util.logging.Level;

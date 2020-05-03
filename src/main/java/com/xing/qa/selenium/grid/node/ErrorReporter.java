@@ -3,6 +3,7 @@ package com.xing.qa.selenium.grid.node;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 
+import com.xing.qa.selenium.grid.BaseSeleniumReporter;
 import org.influxdb.InfluxDB;
 import org.influxdb.dto.Point;
 import org.openqa.grid.common.exception.RemoteException;

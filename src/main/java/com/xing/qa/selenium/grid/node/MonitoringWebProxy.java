@@ -13,6 +13,8 @@ import java.util.logging.Logger;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import com.xing.qa.selenium.grid.hub.HubReporter;
+import com.xing.qa.selenium.grid.influxdb.InfluxDBConnector;
 import org.influxdb.InfluxDB;
 import org.influxdb.InfluxDBFactory;
 import org.openqa.grid.common.RegistrationRequest;
@@ -30,26 +32,7 @@ public class MonitoringWebProxy extends DefaultRemoteProxy {
 
     private static final Logger LOG = Logger.getLogger(MonitoringWebProxy.class.getName());
 
-    private static final String DATABASE = envOr("IFXDB_DB", "selenium-grid");
-
     private static final ScheduledExecutorService EXECUTOR = Executors.newScheduledThreadPool(64);
-
-    private static final String URL = format("http://%s:%s", envOr("IFXDB_HOST", "localhost"), envOr("IFXDB_PORT", "8086"));
-    private static final InfluxDB INFLUX_DB = InfluxDBFactory.connect(
-            URL,
-            envOr("IFXDB_USER", "root"),
-            envOr("IFXDB_PASSWD", "root"));
-
-    static {
-        LOG.info(String.format("Reporting to: %s/db/%s", URL, DATABASE));
-        INFLUX_DB.setLogLevel(InfluxDB.LogLevel.NONE);
-    }
-
-    private static String envOr(String envVar, String defaultVal) {
-        String val = System.getenv(envVar);
-        if (val == null) return defaultVal;
-        return val;
-    }
 
     private final Logger log = Logger.getLogger(getClass().getName());
 
@@ -70,25 +53,26 @@ public class MonitoringWebProxy extends DefaultRemoteProxy {
 
         LOG.info(String.format("Initializing monitoring WebProxy for %s: %s.", remoteHostName, request.toJson()));
 
-        nodeReporter = EXECUTOR.scheduleAtFixedRate(new NodeReporter(remoteHostName, INFLUX_DB, DATABASE, this), 0, 5, TimeUnit.SECONDS);
+
+        nodeReporter = EXECUTOR.scheduleAtFixedRate(new NodeReporter(remoteHostName, InfluxDBConnector.INFLUX_DB, InfluxDBConnector.DATABASE, this), 0, 5, TimeUnit.SECONDS);
     }
 
     @Override
     public void beforeSession(TestSession session) {
-        EXECUTOR.execute(new SessionReporter(remoteHostName, INFLUX_DB, DATABASE, session, ReportType.start));
+        EXECUTOR.execute(new SessionReporter(remoteHostName, InfluxDBConnector.INFLUX_DB, InfluxDBConnector.DATABASE, session, ReportType.start));
         super.beforeSession(session);
     }
 
     @Override
     public void afterSession(TestSession session) {
         super.afterSession(session);
-        EXECUTOR.execute(new SessionReporter(remoteHostName, INFLUX_DB, DATABASE, session, ReportType.finish));
+        EXECUTOR.execute(new SessionReporter(remoteHostName, InfluxDBConnector.INFLUX_DB, InfluxDBConnector.DATABASE, session, ReportType.finish));
     }
 
     @Override
     public void onEvent(List<RemoteException> events, RemoteException lastInserted) {
         super.onEvent(events, lastInserted);
-        EXECUTOR.execute(new ErrorReporter(remoteHostName, INFLUX_DB, DATABASE, lastInserted));
+        EXECUTOR.execute(new ErrorReporter(remoteHostName, InfluxDBConnector.INFLUX_DB, InfluxDBConnector.DATABASE, lastInserted));
     }
 
     @Override
@@ -104,21 +88,21 @@ public class MonitoringWebProxy extends DefaultRemoteProxy {
     @Override
     public void afterCommand(TestSession session, HttpServletRequest request, HttpServletResponse response) {
         ContentSnoopingRequest req = new ContentSnoopingRequest(request);
-        EXECUTOR.execute(new CommandReporter(remoteHostName, INFLUX_DB, DATABASE, session, req, response, ReportType.result));
+        EXECUTOR.execute(new CommandReporter(remoteHostName, InfluxDBConnector.INFLUX_DB, InfluxDBConnector.DATABASE, session, req, response, ReportType.result));
         super.afterCommand(session, req, response);
     }
 
     @Override
     public void beforeCommand(TestSession session, HttpServletRequest request, HttpServletResponse response) {
         ContentSnoopingRequest req = new ContentSnoopingRequest(request);
-        EXECUTOR.execute(new CommandReporter(remoteHostName, INFLUX_DB, DATABASE, session, req, response, ReportType.command));
+        EXECUTOR.execute(new CommandReporter(remoteHostName, InfluxDBConnector.INFLUX_DB, InfluxDBConnector.DATABASE, session, req, response, ReportType.command));
         super.beforeCommand(session, req, response);
     }
 
     @Override
     public void beforeRelease(TestSession session) {
         super.beforeRelease(session);
-        EXECUTOR.execute(new SessionReporter(remoteHostName, INFLUX_DB, DATABASE, session, ReportType.timeout));
+        EXECUTOR.execute(new SessionReporter(remoteHostName, InfluxDBConnector.INFLUX_DB, InfluxDBConnector.DATABASE, session, ReportType.timeout));
     }
 
     @Override

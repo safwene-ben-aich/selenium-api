@@ -6,13 +6,19 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.util.concurrent.ScheduledFuture;
 
+import com.xing.qa.selenium.grid.influxdb.InfluxDBConnector;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.openqa.grid.internal.GridRegistry;
@@ -35,18 +41,25 @@ public class Console extends RegistryBasedServlet {
     private final Logger log = Logger.getLogger(getClass().getName());
     private String coreVersion;
 
+    private static final ScheduledExecutorService EXECUTOR = Executors.newScheduledThreadPool(64);
+
+    private ScheduledFuture<?> hubReporter;
+
+    private String remoteHostName;
+
+
     public Console() {
         this(null);
     }
 
     public Console(GridRegistry registry) {
         super(registry);
-
         coreVersion = new BuildInfo().getReleaseLabel();
     }
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+
         try {
             if ("/requests".equals(req.getPathInfo())) {
                 sendJson(pendingRequests(), req, resp);
@@ -96,8 +109,12 @@ public class Console extends RegistryBasedServlet {
         for (TestSession testSession : getRegistry().getActiveSessions()) {
             try {
                 requestedCapabilities.add(testSession.getRequestedCapabilities());
+                log.log(Level.INFO, "Requested Capabilities : "+testSession.getRequestedCapabilities().toString());
             } catch (Exception e) {}
         }
+
+
+        EXECUTOR.scheduleAtFixedRate(new HubReporter("remoteHostName", InfluxDBConnector.INFLUX_DB, InfluxDBConnector.DATABASE, getRegistry()), 0, 5, TimeUnit.SECONDS);
 
         pending.put("active", activeSessions);
         pending.put("requested_capabilities", requestedCapabilities);

@@ -1,12 +1,12 @@
 package com.xing.qa.selenium.grid.node;
 
-import java.nio.channels.SeekableByteChannel;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 
 import javax.servlet.http.HttpServletResponse;
 
+import com.xing.qa.selenium.grid.BaseSeleniumReporter;
 import org.influxdb.InfluxDB;
 import org.influxdb.dto.Point;
 import org.openqa.grid.internal.ExternalSessionKey;
